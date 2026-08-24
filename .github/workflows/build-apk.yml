@@ -18,9 +18,21 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🔨 Compilar APK Debug con Gradle
-        working-directory: ./framemaster-native
+      - name: 🔍 Buscar y listar estructura (Debug)
+        run: find . -name "gradlew"
+
+      - name: 🔨 Dar permisos y compilar APK Debug
         run: |
+          # Encuentra la ruta exacta de gradlew de forma automática
+          GRADLE_PATH=$(find . -name "gradlew" -print -quit)
+          if [ -z "$GRADLE_PATH" ]; then
+            echo "No se encontró gradlew"
+            exit 1
+          }
+          DIR_PATH=$(dirname "$GRADLE_PATH")
+          echo "Carpeta de Gradle encontrada en: $DIR_PATH"
+          
+          cd "$DIR_PATH"
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -28,5 +40,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: framemaster-native/app/build/outputs/apk/debug/app-debug.apk
+          path: '**/build/outputs/apk/debug/app-debug.apk'
+          
           
