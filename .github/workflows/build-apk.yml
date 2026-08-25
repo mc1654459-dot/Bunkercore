@@ -9,37 +9,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Clonar repositorio
-        uses: actions/checkout@v4
+    - name: 📦 Clonar repositorio
+      uses: actions/checkout@v4
 
-      - name: ☕ Configurar Java (JDK 17)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+    - name: ☕ Configurar Java (JDK 17)
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: 🔍 Buscar y listar estructura (Debug)
-        run: find . -name "gradlew"
+    - name: 🔍 Buscar y listar estructura (Debug)
+      run: find . -name "gradlew"
 
-      - name: 🔨 Dar permisos y compilar APK Debug
-        run: |
-          # Encuentra la ruta exacta de gradlew de forma automática
-          GRADLE_PATH=$(find . -name "gradlew" -print -quit)
-          if [ -z "$GRADLE_PATH" ]; then
-            echo "No se encontró gradlew"
-            exit 1
-          }
-          DIR_PATH=$(dirname "$GRADLE_PATH")
-          echo "Carpeta de Gradle encontrada en: $DIR_PATH"
-          
-          cd "$DIR_PATH"
-          chmod +x gradlew
-          ./gradlew assembleDebug
+    - name: 🛠️ Dar permisos y compilar APK Debug
+      run: |
+        # Encuentra la ruta exacta de gradlew de forma automatica
+        GRADLE_PATH=$(find . -name "gradlew" -print -quit)
+        if [ -z "$GRADLE_PATH" ]; then
+          echo "No se encontro gradlew"
+          exit 1
+        fi
+        DIR_PATH=$(dirname "$GRADLE_PATH")
+        echo "Carpeta de Gradle encontrada en: $DIR_PATH"
 
-      - name: 📦 Subir APK como Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: '**/build/outputs/apk/debug/app-debug.apk'
-          
-          
+        cd "$DIR_PATH"
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: 📦 Subir APK como Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug-apk
+        path: '**/build/outputs/apk/debug/app-debug.apk'
+        
