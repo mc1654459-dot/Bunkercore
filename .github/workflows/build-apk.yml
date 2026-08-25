@@ -3,6 +3,7 @@ name: Compilar APK Android - FrameMaster
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
