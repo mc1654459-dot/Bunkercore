@@ -3,6 +3,7 @@ name: Compilar APK Android - FrameMaster
 on:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -24,11 +25,17 @@ jobs:
       - name: 🔨 Dar permisos y compilar APK Debug
         run: |
           # Encuentra la ruta exacta de gradlew de forma automática
+          set -euo pipefail
+          IFS=$'\n\t'
           GRADLE_PATH=$(find . -name "gradlew" -print -quit)
           if [ -z "$GRADLE_PATH" ]; then
             echo "No se encontró gradlew"
             exit 1
-          }
+          fi
+          if [ ! -f "$GRADLE_PATH" ]; then
+            echo "gradlew encontrado pero no es un fichero: $GRADLE_PATH"
+            exit 1
+          fi
           DIR_PATH=$(dirname "$GRADLE_PATH")
           echo "Carpeta de Gradle encontrada en: $DIR_PATH"
           
@@ -41,5 +48,3 @@ jobs:
         with:
           name: app-debug-apk
           path: '**/build/outputs/apk/debug/app-debug.apk'
-          
-          
