@@ -1,32 +1,463 @@
 <!DOCTYPE html>
-<html>
-<body>
-    <h1>Bunkercore: Acceso Biométrico</h1>
-    <p id="status">Verificando identidad...</p>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bunkercore Zero-Trust Identity & Vault</title>
+    <meta name="description" content="Zero-Trust enterprise identity infrastructure with FIDO2/WebAuthn biometric authentication, AES-256-GCM data encryption, multi-tenant isolation, and immutable digital notary audit ledger.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                    ⚡
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-bold tracking-tight text-white">Bunkercore</h1>
+                        <span class="px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">Zero-Trust V2</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Infraestructura de Identidad FIDO2 y Cifrado Soberano AES-256-GCM</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div id="statusBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="systemStatusText">Sistema En Línea</span>
+                </div>
+                <button id="refreshBtn" onclick="loadStatus(); loadLedger(); loadRecords();" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    🔄 Actualizar
+                </button>
+            </div>
+        </div>
+    </header>
 
-    <script type="module">
-        import { startRegistration } from 'https://unpkg.com/@simplewebauthn/browser@10.0.0/dist/bundle/index.mjs';
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        
+        <!-- Status & Telemetry Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Algoritmo Criptográfico</div>
+                <div class="text-base font-semibold text-emerald-400 font-mono">AES-256-GCM</div>
+                <div class="text-xs text-slate-500 mt-1">256-bit Key / 12-byte IV / 16-byte Tag</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Capa de Persistencia</div>
+                <div id="dbModeText" class="text-base font-semibold text-sky-400">Cripto-Bóveda Activa</div>
+                <div class="text-xs text-slate-500 mt-1">Aislamiento Multitenant (RLS Ready)</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Autenticación Biométrica</div>
+                <div id="authStatusText" class="text-base font-semibold text-emerald-400">Validada (FIDO2)</div>
+                <div id="authUserText" class="text-xs text-slate-500 mt-1">Usuario: admin-david</div>
+            </div>
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800">
+                <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Notario Digital (Ledger)</div>
+                <div id="ledgerCountText" class="text-base font-semibold text-purple-400">0 Eventos Inmutables</div>
+                <div class="text-xs text-slate-500 mt-1">Huellas SHA-256 encadenadas</div>
+            </div>
+        </div>
 
-        const status = document.getElementById('status');
+        <!-- 2 Column Layout: Operations & Notary -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Column: Biometrics & Vault Operations -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Card 1: Biometric & FIDO2 Identity -->
+                <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 text-lg">🛡️</span>
+                            <div>
+                                <h2 class="text-lg font-semibold text-white">Blindaje Biométrico & FIDO2</h2>
+                                <p class="text-xs text-slate-400">Control de acceso físico y tokens WebAuthn sin contraseñas</p>
+                            </div>
+                        </div>
+                        <div id="biometricStateIndicator" class="px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            AUTORIZADO
+                        </div>
+                    </div>
 
-        async function startAuth() {
-            const res = await fetch('/authn/options/david);
-            const options = await res.json();
+                    <div class="p-4 rounded-xl bg-slate-950 border border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm">
+                            <div class="font-medium text-slate-200">Sensor de Huella / Llave Física FIDO2</div>
+                            <div class="text-xs text-slate-400" id="biometricDesc">Estado actual del guardia Zero-Trust en memoria y auth.json</div>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button id="toggleBioBtn" onclick="toggleBiometricAuth()" class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm">
+                                👆 Simular Huella Válida
+                            </button>
+                            <button onclick="registerWebAuthnKey()" class="w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                                🔑 Registrar Llave WebAuthn
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- Card 2: Zero-Trust Data Encryption (Save) -->
+                <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="p-2 rounded-lg bg-sky-500/10 text-sky-400 text-lg">🔒</span>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Cifrado Soberano (Procesar & Guardar)</h2>
+                            <p class="text-xs text-slate-400">Cifra datos con AES-256-GCM, aisla por Tenant y sella en el Ledger</p>
+                        </div>
+                    </div>
+
+                    <form id="encryptForm" onsubmit="handleEncrypt(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Identificador de Tenant (Empresa)</label>
+                                <input type="text" id="tenantInput" required value="EMPRESA_A" placeholder="Ej: EMPRESA_A" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-sky-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Firma FIDO2 de Hardware (min 32 car.)</label>
+                                <input type="text" id="signatureInput" required value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" placeholder="Firma de 32+ caracteres" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-sky-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">Carga de Datos a Proteger (JSON o Texto)</label>
+                            <textarea id="payloadInput" rows="3" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-sky-500 transition" placeholder='{"item": "Madera_210cm", "cantidad": 10, "secreto": "Bunkercore-Secret-Vault"}'>{
+  "item": "Madera_210cm",
+  "cantidad": 10,
+  "secreto": "Bunkercore-Secret-Vault"
+}</textarea>
+                        </div>
+
+                        <button type="submit" id="encryptSubmitBtn" class="w-full py-2.5 rounded-lg text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white transition flex items-center justify-center gap-2">
+                            <span>🔐 Cifrar y Almacenar en Bóveda</span>
+                        </button>
+                    </form>
+
+                    <div id="encryptResult" class="hidden p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-2">
+                        <div class="text-emerald-400 font-semibold flex items-center gap-1.5">
+                            <span>✅</span> <span>Datos Cifrados y Sellados en Ledger</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Blob Seguro (iv:tag:data):</span>
+                            <div id="encryptedBlobOutput" class="text-sky-300 break-all bg-slate-900 p-2 rounded mt-1 select-all"></div>
+                        </div>
+                        <div>
+                            <span class="text-slate-400">Huella de Integridad (Fingerprint):</span>
+                            <span id="fingerprintOutput" class="text-purple-300 ml-1"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Zero-Trust Data Retrieval (Decrypt) -->
+                <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="p-2 rounded-lg bg-amber-500/10 text-amber-400 text-lg">🔓</span>
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Recuperación & Descifrado Seguro</h2>
+                            <p class="text-xs text-slate-400">Valida la identidad del tenant con RLS y descifra el último registro</p>
+                        </div>
+                    </div>
+
+                    <form id="decryptForm" onsubmit="handleDecrypt(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Tenant a Consultar</label>
+                                <input type="text" id="decryptTenantInput" required value="EMPRESA_A" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm focus:outline-none focus:border-amber-500 transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Firma FIDO2</label>
+                                <input type="text" id="decryptSignatureInput" required value="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-sm font-mono focus:outline-none focus:border-amber-500 transition">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="decryptSubmitBtn" class="w-full py-2.5 rounded-lg text-sm font-semibold bg-amber-600 hover:bg-amber-500 text-white transition flex items-center justify-center gap-2">
+                            <span>🔍 Descifrar Registro de Tenant</span>
+                        </button>
+                    </form>
+
+                    <div id="decryptResult" class="hidden p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono space-y-2">
+                        <div class="text-amber-400 font-semibold flex items-center gap-1.5">
+                            <span>🔓</span> <span>Dato Recuperado y Descifrado con Éxito</span>
+                        </div>
+                        <pre id="decryptedPayloadOutput" class="text-slate-200 bg-slate-900 p-3 rounded overflow-x-auto"></pre>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Digital Notary Ledger & Records -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Digital Notary Card -->
+                <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400 text-lg">📜</span>
+                            <div>
+                                <h2 class="text-lg font-semibold text-white">Notario Digital (Ledger)</h2>
+                                <p class="text-xs text-slate-400">Pista de auditoría inmutable en tiempo real</p>
+                            </div>
+                        </div>
+                        <button onclick="loadLedger()" class="text-xs text-purple-400 hover:text-purple-300">
+                            Refrescar
+                        </button>
+                    </div>
+
+                    <div id="ledgerList" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        <div class="text-xs text-slate-500 text-center py-6">Cargando eventos del notario...</div>
+                    </div>
+                </div>
+
+                <!-- Stored Vault Records -->
+                <div class="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 text-lg">🗄️</span>
+                            <div>
+                                <h2 class="text-lg font-semibold text-white">Bóveda Cifrada (Registros)</h2>
+                                <p class="text-xs text-slate-400">Blobs encriptados aislados por Tenant</p>
+                            </div>
+                        </div>
+                        <button onclick="loadRecords()" class="text-xs text-emerald-400 hover:text-emerald-300">
+                            Refrescar
+                        </button>
+                    </div>
+
+                    <div id="recordsList" class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                        <div class="text-xs text-slate-500 text-center py-6">Cargando registros cifrados...</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 mt-12 py-6 text-center text-xs text-slate-500">
+        Bunkercore Zero-Trust Architecture • FIDO2 / WebAuthn • AES-256-GCM • ARM64 Optimized
+    </footer>
+
+    <!-- Client Script -->
+    <script>
+        let currentAuthStatus = true;
+
+        async function loadStatus() {
             try {
-                const asseResp = await startAuthenticationn(options);
-                const verif = await fetch('/register/verify', {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                document.getElementById('systemStatusText').innerText = "Sistema " + data.status;
+                document.getElementById('dbModeText').innerText = data.databaseMode;
+                currentAuthStatus = data.authStatus;
+                
+                const bioBadge = document.getElementById('biometricStateIndicator');
+                const authStatusText = document.getElementById('authStatusText');
+                const authUserText = document.getElementById('authUserText');
+                const toggleBtn = document.getElementById('toggleBioBtn');
+
+                if (currentAuthStatus) {
+                    bioBadge.className = "px-2.5 py-1 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                    bioBadge.innerText = "AUTORIZADO";
+                    authStatusText.innerText = "Aprobada (Acceso Abierto)";
+                    authStatusText.className = "text-base font-semibold text-emerald-400";
+                    authUserText.innerText = "Usuario: " + (data.authInfo?.user || 'admin-david');
+                    toggleBtn.innerText = "❌ Revocar Acceso Biométrico";
+                    toggleBtn.className = "w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold bg-red-600/80 hover:bg-red-500 text-white transition shadow-sm";
+                } else {
+                    bioBadge.className = "px-2.5 py-1 rounded text-xs font-semibold bg-red-500/20 text-red-300 border border-red-500/30";
+                    bioBadge.innerText = "BLOQUEADO";
+                    authStatusText.innerText = "Bloqueado (Sin Huella)";
+                    authStatusText.className = "text-base font-semibold text-red-400";
+                    authUserText.innerText = "Se requiere validación biométrica";
+                    toggleBtn.innerText = "👆 Simular Huella Válida";
+                    toggleBtn.className = "w-full sm:w-auto px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition shadow-sm";
+                }
+            } catch (err) {
+                console.error("Error loading status:", err);
+            }
+        }
+
+        async function toggleBiometricAuth() {
+            try {
+                const newStatus = !currentAuthStatus;
+                await fetch('/api/auth/biometric', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(attResp),
+                    body: JSON.stringify({ status: newStatus, user: 'admin-david' })
                 });
-                await fetch('/auth/verify', { ... });
-                status.innerText = "¡Huella registrada permanentemente en Neon!";
-                }
-            } catch (e) {
-                status.innerText = "Error: " + e.message;
+                await loadStatus();
+                await loadLedger();
+            } catch (err) {
+                alert('Error al actualizar autenticación biométrica: ' + err.message);
             }
-        };
+        }
+
+        async function registerWebAuthnKey() {
+            try {
+                const optRes = await fetch('/api/register/options', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'david@bunkercore', userId: 'admin-david' })
+                });
+                const options = await optRes.json();
+                
+                // Intento de registro simulado o por WebAuthn API
+                const verifyRes = await fetch('/api/register/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: 'cred_fido2_' + Date.now().toString(36),
+                        rawId: 'raw_key_' + Math.random().toString(36).substring(2),
+                        type: 'public-key',
+                        challenge: options.challenge || 'challenge_token'
+                    })
+                });
+                const verResult = await verifyRes.json();
+                alert('¡Llave FIDO2 / WebAuthn registrada con éxito!\nID Credencial: ' + verResult.credentialId);
+                await loadStatus();
+                await loadLedger();
+            } catch (err) {
+                alert('Error durante registro WebAuthn: ' + err.message);
+            }
+        }
+
+        async function handleEncrypt(e) {
+            e.preventDefault();
+            const tenantId = document.getElementById('tenantInput').value.trim();
+            const userSignature = document.getElementById('signatureInput').value.trim();
+            let inputData = document.getElementById('payloadInput').value.trim();
+            
+            try {
+                inputData = JSON.parse(inputData);
+            } catch {
+                // Raw text is valid
+            }
+
+            try {
+                const res = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenantId, inputData, userSignature })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Fallo en el cifrado');
+                }
+
+                document.getElementById('encryptResult').classList.remove('hidden');
+                document.getElementById('encryptedBlobOutput').innerText = data.data;
+                document.getElementById('fingerprintOutput').innerText = data.fingerprint;
+                
+                await loadLedger();
+                await loadRecords();
+            } catch (err) {
+                alert('❌ Error: ' + err.message);
+            }
+        }
+
+        async function handleDecrypt(e) {
+            e.preventDefault();
+            const tenantId = document.getElementById('decryptTenantInput').value.trim();
+            const userSignature = document.getElementById('decryptSignatureInput').value.trim();
+
+            try {
+                const res = await fetch('/api/retrieve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenantId, userSignature })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Fallo al descifrar');
+                }
+
+                document.getElementById('decryptResult').classList.remove('hidden');
+                document.getElementById('decryptedPayloadOutput').innerText = 
+                    typeof data.data === 'object' ? JSON.stringify(data.data, null, 2) : data.data;
+                
+                await loadLedger();
+            } catch (err) {
+                alert('❌ Error al recuperar: ' + err.message);
+            }
+        }
+
+        async function loadLedger() {
+            try {
+                const res = await fetch('/api/ledger');
+                const data = await res.json();
+                
+                document.getElementById('ledgerCountText').innerText = data.total + ' Eventos Inmutables';
+                const container = document.getElementById('ledgerList');
+                
+                if (!data.events || data.events.length === 0) {
+                    container.innerHTML = '<div class="text-xs text-slate-500 text-center py-6">No hay eventos registrados aún. Realiza una operación para generar un evento sellado.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.events.map(ev => `
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs font-mono space-y-1 hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between text-slate-400">
+                            <span class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 font-semibold">${ev.action}</span>
+                            <span class="text-[10px] text-slate-500">${new Date(ev.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="text-slate-200 font-sans text-xs">${ev.summary}</div>
+                        <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-900">
+                            <span class="text-slate-500">Tenant: <span class="text-slate-300">${ev.tenantId}</span></span>
+                            <span class="text-purple-400">#${ev.fingerprint}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Error loading ledger:", err);
+            }
+        }
+
+        async function loadRecords() {
+            try {
+                const res = await fetch('/api/records');
+                const data = await res.json();
+                const container = document.getElementById('recordsList');
+
+                if (!data.records || data.records.length === 0) {
+                    container.innerHTML = '<div class="text-xs text-slate-500 text-center py-6">Bóveda vacía. Cifra datos para crear un registro aislado.</div>';
+                    return;
+                }
+
+                container.innerHTML = data.records.map(rec => `
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-xs font-mono space-y-1">
+                        <div class="flex items-center justify-between">
+                            <span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 font-semibold">${rec.tenant_id}</span>
+                            <span class="text-[10px] text-slate-500">${new Date(rec.created_at).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="text-slate-400 text-[11px] truncate bg-slate-900 p-1.5 rounded select-all">${rec.secure_data}</div>
+                        <div class="text-[10px] text-slate-500">Huella: <span class="text-purple-400">${rec.fingerprint}</span></div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Error loading records:", err);
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadLedger();
+            loadRecords();
+        });
     </script>
 </body>
 </html>
+

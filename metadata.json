@@ -1,0 +1,6 @@
+{
+  "name": "Bunkercore Zero-Trust Identity & Vault",
+  "description": "Zero-Trust enterprise identity infrastructure with FIDO2/WebAuthn biometric authentication, AES-256-GCM data encryption, multi-tenant isolation, and immutable digital notary audit ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

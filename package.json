@@ -5,7 +5,8 @@
   "main": "src/api/server.js",
   "scripts": {
     "start": "node src/api/server.js",
-    "dev": "node --watch src/api/server.js"
+    "dev": "node src/api/server.js",
+    "build": "node --check src/api/server.js && echo 'Build complete'"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1117.0",

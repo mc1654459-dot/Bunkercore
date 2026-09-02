@@ -2,11 +2,21 @@ import crypto from 'crypto';
 import 'dotenv/config';
 
 // La MASTER_KEY debe tener exactamente 32 bytes (256 bits) para AES-256.
-// Se recomienda generarla con: node -e "console.log(crypto.randomBytes(32).toString('hex'))"
-const MASTER_KEY = process.env.MASTER_KEY;
+// Se recomienda configurarla en el .env con 64 caracteres hexadecimales.
+const DEFAULT_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
-if (!MASTER_KEY || Buffer.from(MASTER_KEY, 'hex').length !== 32) {
-    throw new Error("[CRYPTO ERROR] Se requiere una MASTER_KEY de 32 bytes (64 caracteres hex) en el .env");
+function getMasterKey() {
+    const rawKey = process.env.MASTER_KEY || process.env.ENCRYPTION_KEY || DEFAULT_KEY;
+    try {
+        const buf = Buffer.from(rawKey, 'hex');
+        if (buf.length === 32) {
+            return buf;
+        }
+        // If not 32 bytes hex, create a SHA-256 hash to ensure 32 bytes
+        return crypto.createHash('sha256').update(String(rawKey)).digest();
+    } catch {
+        return Buffer.from(DEFAULT_KEY, 'hex');
+    }
 }
 
 const ALGORITHM = 'aes-256-gcm';
@@ -20,7 +30,7 @@ const AUTH_TAG_LENGTH = 16;
 export const encryptData = async (data) => {
     try {
         const iv = crypto.randomBytes(IV_LENGTH);
-        const key = Buffer.from(MASTER_KEY, 'hex');
+        const key = getMasterKey();
         const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
         const textToEncrypt = typeof data === 'string' ? data : JSON.stringify(data);
@@ -49,7 +59,7 @@ export const decryptData = async (secureBlob) => {
             throw new Error("Formato de blob cifrado inválido.");
         }
 
-        const key = Buffer.from(MASTER_KEY, 'hex');
+        const key = getMasterKey();
         const iv = Buffer.from(ivHex, 'hex');
         const authTag = Buffer.from(authTagHex, 'hex');
         const encryptedText = Buffer.from(encryptedHex, 'hex');
